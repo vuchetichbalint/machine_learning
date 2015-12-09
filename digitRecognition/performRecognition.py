@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Import the modules
 import cv2
 from sklearn.externals import joblib
@@ -8,9 +10,9 @@ import numpy as np
 clf = joblib.load("digits_cls.pkl")
 
 # Read the input image
-im = cv2.imread("photo_1.jpg")
+im = cv2.imread("20151208_041408.jpg")
 #im = cv2.imread("/home/balint/Desktop/English/Hnd/Img/Sample008/img008-010.png")
-# im.shape (height, width, 3[rgb]) 
+# im.shape: (height, width, 3[rgb]) 
 print('This image is ' + str(im.shape[0]) + '*' + str(im.shape[1]) + ' pixel and has ' + str(im.shape[2]) + ' color values.')
 # Convert to grayscale and apply Gaussian filtering (http://opencv-python-tutroals.readthedocs.org/en/latest/py_tutorials/py_imgproc/py_filtering/py_filtering.html#gaussian-filtering)
 im_gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
@@ -34,25 +36,24 @@ rects = [cv2.boundingRect(ctr) for ctr in ctrs]
 # For each rectangular region, calculate HOG features and predict
 # the digit using Linear SVM.
 
-#for rect in rects:
-rect = rects[2]
-# Draw the rectangles to two diagonal corner, with color, with thickness 
-cv2.rectangle(im, (rect[0], rect[1]), (rect[0] + rect[2], rect[1] + rect[3]), (0, 255, 0), 2) 
-# Make the rectangular region around the digit
-leng = int(rect[3] * 1.6)
-pt1 = int(rect[1] + rect[3] // 2 - leng // 2)
-pt2 = int(rect[0] + rect[2] // 2 - leng // 2)
-roi = im_th[pt1:pt1+leng, pt2:pt2+leng]
-# Resize the image, ROI = rectangular of interest
-roi = cv2.resize(roi, (28, 28), interpolation=cv2.INTER_AREA)
-# megvastagitjuk a szamot
-roi = cv2.dilate(roi, (3, 3))
-# Calculate the HOG features
-roi_hog_fd = hog(roi, orientations=9, pixels_per_cell=(14, 14), cells_per_block=(1, 1), visualise=False)
-nbr = clf.predict(np.array([roi_hog_fd], 'float64'))
-
-#cv2.putText(img, text, origin, font, fontScale, color, thickness)
-cv2.putText(im, str(int(nbr[0])), (rect[0], rect[1]),cv2.FONT_HERSHEY_DUPLEX, 2, (0, 255, 255), 3)
+for rect in rects:
+	#rect = rects[2]
+	# Draw the rectangles to two diagonal corner, with color, with thickness 
+	cv2.rectangle(im, (rect[0], rect[1]), (rect[0] + rect[2], rect[1] + rect[3]), (0, 255, 0), 2) 
+	# Make the rectangular region around the digit
+	leng = int(rect[3] * 1.05)
+	pt1 = int(rect[1] + rect[3] // 2 - leng // 2)
+	pt2 = int(rect[0] + rect[2] // 2 - leng // 2)
+	roi = im_th[pt1:pt1+leng, pt2:pt2+leng]
+	# Resize the image, ROI = rectangular of interest
+	roi = cv2.resize(roi, (28, 28), interpolation=cv2.INTER_AREA)
+	# megvastagitjuk a szamot
+	roi = cv2.dilate(roi, (3, 3))
+	# Calculate the HOG features
+	roi_hog_fd = hog(roi, orientations=9, pixels_per_cell=(14, 14), cells_per_block=(1, 1), visualise=False)
+	nbr = clf.predict(np.array([roi_hog_fd], 'float64'))
+	#cv2.putText(img, text, origin, font, fontScale, color, thickness)
+	cv2.putText(im, str(int(nbr[0])), (rect[0], rect[1]),cv2.FONT_HERSHEY_DUPLEX, 2, (0, 255, 255), 3)
 
 cv2.imshow("Resulting Image with Rectangular ROIs", im)
 cv2.waitKey()
