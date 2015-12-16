@@ -11,20 +11,20 @@ from collections import Counter
 from os import listdir
 from os.path import isfile, join
 
-mypath = '/home/balint/workspace/svm/digitRecognition/data'
+# Load the classifier
+clf = joblib.load("digits_cls.pkl")
+
+mypath = '/home/balint/workspace/svm/digitRecognition/val'
 paths = [f for f in listdir(mypath) if isfile(join(mypath, f))]
 
 list_hog_fd = []
 labels = []
-i = 1
+predictions = []
+files = []
 no_images = len(paths)
-
-print('Compute features')
-print('progress:')
 
 for path in paths:
 	# a kep beolvasasa
-	print('		' + mypath + '/' + path)
 	im = cv2.imread(mypath + '/' + path)
 	# label meghatarozasa a fajlnev alapjan 
 	label = int(path[-10:-8])-1 
@@ -38,7 +38,6 @@ for path in paths:
 	ctrs, hier = cv2.findContours(im_th.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 	# a megtalalt - remelhetoleg egy - szamjegy befoglalo szogszoge 
 	rects = [cv2.boundingRect(ctr) for ctr in ctrs]
-	print('megtalalt sokszogek: ' + str(len(rects)))
 	# elunk a feltetelezessel, hogy egyet talalt meg, de azert a biztonsag kedveert a 4*4-nel kisebb teglalapokat eldobjuk
 	for rect in rects:
 		if ( rect[2] > 4 and rect[3] > 4  ):
@@ -53,23 +52,21 @@ for path in paths:
 	# megvastagitjuk a szamjegyeket 
 	roi = cv2.dilate(roi, (3, 3))
 	# kiszamoljuk a hog gradienseket
-	fd = hog(roi, orientations=9, pixels_per_cell=(7, 7), cells_per_block=(2, 2), visualise=False)
-	# hozzafuzzuk az eddigiekhez 
-	list_hog_fd.append(fd)
+	fd = hog(roi, orientations=9, pixels_per_cell=(14, 14), cells_per_block=(1, 1), visualise=False)
+	nbr = clf.predict(np.array([fd], 'float64'))
 	labels.append(label)
-	# progress kiirasa
-	if (float(i*100)/no_images == i*100/no_images):
-		print ('	' + str(i*100//no_images) + '%')
-	i+=1
+	predictions.append(nbr)
+	files.append(path)
 
-# atalakitas NumPy formatumra
-hog_features = np.array(list_hog_fd, 'float64')
-labels = np.array(labels, 'int')
+missed_msg = ''
+no_missed = 0
+for i in range(len(labels)):
+	if (  str(labels[i]) != str(predictions[i])[1:2]  ):
+		missed_msg = '!!!!!!!'
+		no_missed +=1		
+	print(str(files[i]) + '\t actual:' + str(labels[i]) + '\t predicted:' + str(predictions[i])[1:2] + '\t' + missed_msg)
+	missed_msg = ''
 
-print('Training LinearSVC')
-clf = LinearSVC()
-print('Done, saving...')
-clf.fit(hog_features, labels)
-joblib.dump(clf, "digits_cls.pkl", compress=3)
+print ('Hibas oszalyozasok szama: ' + str(no_missed))
 
-
+cv2.waitKey()
